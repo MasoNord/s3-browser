@@ -5,6 +5,10 @@ build/
 dist/
 wheels/
 *.egg-info
-
+.idea
 # Virtual environments
 .venv
+
+storage
+logs
+set_env.ps1
