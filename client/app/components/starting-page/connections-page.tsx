@@ -61,6 +61,11 @@ export default function ConnectionsPage() {
     }
   }
 
+  function handlConnectSubmit() {
+    console.log("Handle Connection Submit button pressed")
+    window.location.href =`/connection/${selectedConnection?.id}/dashboard`
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">
       <p className="mb-10 text-3xl font-semibold tracking-tight">
@@ -209,6 +214,7 @@ export default function ConnectionsPage() {
                   <ButtonGroup>
                     <Button
                       disabled={selectedConnection != null ? false : true}
+                      onClick={() => handlConnectSubmit()}
                     >
                       Connect
                     </Button>
