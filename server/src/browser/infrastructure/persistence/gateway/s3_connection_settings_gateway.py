@@ -25,8 +25,14 @@ class SAS3ConnectionSettingsGateway(S3ConnectionSettingsGateway):
     async def delete(self, instance: S3ConnectionSetting) -> None:
         pass
 
-    async def get_by_id(self, settings_id: UUID) -> S3ConnectionSetting:
-        pass
+    async def get_by_id(self, settings_id: str) -> S3ConnectionSetting | None:
+        stmt = select(S3ConnectionSetting).where(S3ConnectionSetting.id == settings_id) # type: ignore
+
+        record = await self._session.execute(stmt)
+
+        connection_setting = record.scalar_one_or_none()
+
+        return connection_setting
 
 
     async def get_all(self) -> List[S3ConnectionSetting]:
