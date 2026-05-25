@@ -85,7 +85,9 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
         active_connection = self._active_connections.pop(connection_id, None)
 
         if not active_connection:
-            raise InfrastructureError()
+            logger.warning("No active connection found by requested ID: %s", connection_id)
+            return None
+            # raise InfrastructureError()
 
         await active_connection.close()
 
