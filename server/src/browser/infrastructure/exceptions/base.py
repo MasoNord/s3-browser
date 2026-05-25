@@ -1,0 +1,4 @@
+
+
+class InfrastructureError(Exception):
+    pass

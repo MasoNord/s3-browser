@@ -1,12 +1,14 @@
 import logging
 from typing import AsyncIterator
 
+from aiobotocore.client import AioBaseClient
+from aiobotocore.session import AioSession, get_session
 from dishka import Provider, provide, Scope
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker, AsyncSession
 
 from browser.bootstrap.config.sqlite import LocalSQLLiteConnectionConfig
 from browser.domain.entity.s3_connection_settings import S3ConnectionSetting
-from browser.infrastructure.s3.s3_connection_manager import S3ConnectionManager
+from browser.infrastructure.s3.s3_connection_manager import S3ConnectionManager, AiobotocoreS3ConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,20 @@ class LocalSQLLiteConnectionProvider(Provider):
 class S3(Provider):
     scope = Scope.APP
 
-    connection_manager = provide(S3ConnectionManager)
+    @provide(scope = Scope.APP)
+    async def provide_s3_session(self) -> AioSession:
+        logger.debug("Creating AioSession for S3 client")
+        return get_session()
+
+    @provide(scope=Scope.APP, provides=S3ConnectionManager)
+    async def provide_connection_manager(self, aiobotocore_session: AioSession) -> AsyncIterator[AiobotocoreS3ConnectionManager]:
+
+        logger.debug("Starting S3 connection manager...")
+        async with AiobotocoreS3ConnectionManager(aiobotocore_session) as connection_manager:
+            logger.debug("S3 connection manager started.")
+            yield connection_manager
+            logger.debug("Closing S3 connection manager.")
+        logger.debug("S3 connection manager closed.")
 
 
 def infrastructure_providers() -> tuple[Provider, ...]:
