@@ -22,5 +22,5 @@ class S3ConnectionSettingsGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_all(self, settings_id: UUID) -> List[S3ConnectionSetting]:
+    async def get_all(self) -> List[S3ConnectionSetting]:
         raise NotImplementedError

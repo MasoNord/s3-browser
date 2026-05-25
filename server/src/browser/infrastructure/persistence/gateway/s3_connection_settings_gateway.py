@@ -1,6 +1,7 @@
 from typing import List
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,5 +29,11 @@ class SAS3ConnectionSettingsGateway(S3ConnectionSettingsGateway):
         pass
 
 
-    async def get_all(self, settings_id: UUID) -> List[S3ConnectionSetting]:
-        pass
+    async def get_all(self) -> List[S3ConnectionSetting]:
+        stmt = select(S3ConnectionSetting)
+
+        records = await self._session.execute(stmt)
+
+        connection_settings = records.scalars().all()
+
+        return list(connection_settings)
