@@ -23,12 +23,22 @@ class Config:
         stored_path = ""
         if "DB_STORAGE_PATH" not in  os.environ:
             stored_path = get_root_directory_path() / "storage"
-            os.makedirs(stored_path, exist_ok=True)
         else:
+            # TODO: add check if db storage path exists
             stored_path = os.environ["DB_STORAGE_PATH"]
 
+        # Creat storage folder if not exists
+        os.makedirs(stored_path, exist_ok=True)
+
+        # Create .db file if not exists
+        data_path = os.path.join(stored_path, "data.db")
+
+        if not os.path.exists(data_path):
+            with open(data_path, "w") as f:
+                pass
+
         db = LocalSQLLiteConnectionConfig(
-            storage_path=str(stored_path)
+            storage_path=data_path
         )
 
         application_config = ApplicationConfig(

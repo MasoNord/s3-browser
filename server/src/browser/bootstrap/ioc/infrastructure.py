@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 class LocalSQLLiteConnectionProvider(Provider):
 
-
     @provide(scope=Scope.APP)
     async def provide_async_engine(
         self,

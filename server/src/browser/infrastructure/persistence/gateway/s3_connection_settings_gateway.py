@@ -1,10 +1,12 @@
 from typing import List
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from browser.application.common.gateway.s3_connection_settings_gateway import S3ConnectionSettingsGateway
 from browser.domain.entity.s3_connection_settings import S3ConnectionSetting
+from browser.infrastructure.exceptions.base import InfrastructureError
 
 
 class SAS3ConnectionSettingsGateway(S3ConnectionSettingsGateway):
@@ -13,7 +15,11 @@ class SAS3ConnectionSettingsGateway(S3ConnectionSettingsGateway):
         self._session = session
 
     async def add(self, instance: S3ConnectionSetting) -> None:
-        pass
+        try:
+            self._session.add(instance)
+            await self._session.flush((instance,))
+        except IntegrityError as err:
+            raise InfrastructureError from err
 
     async def delete(self, instance: S3ConnectionSetting) -> None:
         pass
