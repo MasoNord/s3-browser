@@ -38,6 +38,9 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
     async def __aexit__(self, exc_type, exc, tb) -> None:
         await self._close()
 
+    def get_active_connection(self, connection_id) -> AioBaseClient | None:
+        return self._active_connections.get(connection_id, None)
+
     async def get_active_connections(self) -> List[ConnectionConfig]:
         return [
             self._active_connections_config[key] for key in self._active_connections_config.keys()
@@ -47,7 +50,7 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
         connection_config = self._active_connections_config.get(connection_id, None)
 
         if connection_config is not None:
-            connection_config.last_used_at = datetime.now()
+            connection_config.last_used_at = datetime.now(tz=timezone.utc)
 
         return None
 
