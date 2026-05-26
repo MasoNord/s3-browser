@@ -3,6 +3,8 @@ from dishka import Provider, Scope, provide_all, provide
 from browser.application.common.gateway.s3_connection_settings_gateway import S3ConnectionSettingsGateway
 from browser.application.common.gateway.uow import UoW
 from browser.application.s3_connections.create import CreateS3Connection
+from browser.application.s3_connections.read import ReadActiveConnections
+from browser.application.s3_connections.restore import RestoreS3Connection
 from browser.application.s3_settings.delete import DeleteS3ConnectionSettingById
 from browser.application.s3_settings.read import ReadS3SettingsAll, ReadS3ConnectionSettingByID
 from browser.infrastructure.persistence.gateway.s3_connection_settings_gateway import SAS3ConnectionSettingsGateway
@@ -19,7 +21,9 @@ class ApplicationProvider(Provider):
         CreateS3Connection,
         ReadS3SettingsAll,
         ReadS3ConnectionSettingByID,
-        DeleteS3ConnectionSettingById
+        DeleteS3ConnectionSettingById,
+        ReadActiveConnections,
+        RestoreS3Connection
     )
 
     s3_connection_settings_gateway = provide(SAS3ConnectionSettingsGateway, provides=S3ConnectionSettingsGateway)
