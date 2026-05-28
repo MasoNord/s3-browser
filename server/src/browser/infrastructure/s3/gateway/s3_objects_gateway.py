@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 class AiobotocoreS3ObjectsGateway(S3ObjectsGateway):
 
-
     def __init__(self, connection_manager: AiobotocoreS3ConnectionManager):
         self._connection_manager = connection_manager
 
@@ -61,4 +60,20 @@ class AiobotocoreS3ObjectsGateway(S3ObjectsGateway):
         logger.info("File uploading ended")
 
         return data.prefix
+
+    async def delete_object(self, bucket_name: str, prefix: str, key: str, connection_id: UUID):
+        try:
+            connection = await self._connection_manager.get_active_connection(connection_id)
+            prefix = prefix or ""
+
+            if prefix and not prefix.endswith("/"):
+                prefix += "/"
+
+            object_key = f"{prefix}{key}"
+            await connection.delete_object(
+                Bucket=bucket_name,
+                Key=object_key,
+            )
+        except ClientError as e:
+            raise InfrastructureError(str(e))
 

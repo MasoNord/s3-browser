@@ -1,13 +1,6 @@
 import * as React from "react"
 import { useParams, useSearchParams } from "react-router"
-import {
-  Folder,
-  File,
-  Download,
-  Trash2,
-  Upload,
-  ArrowLeft,
-} from "lucide-react"
+import { Folder, File, Download, Trash2, Upload, ArrowLeft } from "lucide-react"
 
 import {
   Breadcrumb,
@@ -19,11 +12,7 @@ import {
 } from "../ui/breadcrumb"
 
 import { Separator } from "../ui/separator"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "../ui/sidebar"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "../ui/sidebar"
 
 import { AppSidebar } from "./app-sidebar"
 import { Button } from "../ui/button"
@@ -156,14 +145,13 @@ export default function ConnectionDashboardPage() {
     }
 
     try {
-      await s3BrowserAPIBaseV1.delete(
-        `/api/v1/connections/${connectionId}/buckets/${selectedBucket}/objects`,
-        {
-          params: {
-            key,
-          },
-        }
-      )
+      await s3BrowserAPIBaseV1.delete(`/objects/${connectionId}/delete`, {
+        params: {
+          bucket_name: selectedBucket,
+          key: key,
+          prefix: currentPrefix,
+        },
+      })
 
       toast.success("Объект удалён")
 
@@ -212,9 +200,7 @@ export default function ConnectionDashboardPage() {
     }
   }
 
-  const handleFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
 
     if (!file || !selectedBucket) return
@@ -276,10 +262,7 @@ export default function ConnectionDashboardPage() {
           <div className="flex items-center gap-2 px-3">
             <SidebarTrigger />
 
-            <Separator
-              orientation="vertical"
-              className="mr-2 h-4"
-            />
+            <Separator orientation="vertical" className="mr-2 h-4" />
 
             <Breadcrumb>
               <BreadcrumbList>
@@ -337,7 +320,6 @@ export default function ConnectionDashboardPage() {
                 className="gap-2"
               >
                 <Upload className="size-4" />
-
                 Upload File
               </Button>
             </div>
@@ -360,13 +342,9 @@ export default function ConnectionDashboardPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
 
-                    <TableHead className="w-[120px]">
-                      Size
-                    </TableHead>
+                    <TableHead className="w-[120px]">Size</TableHead>
 
-                    <TableHead className="w-[200px]">
-                      Last Modified
-                    </TableHead>
+                    <TableHead className="w-[200px]">Last Modified</TableHead>
 
                     <TableHead className="w-[100px] text-right">
                       Actions
@@ -433,36 +411,23 @@ export default function ConnectionDashboardPage() {
                   ))}
 
                   {data?.files.map((file) => (
-                    <TableRow
-                      key={file.full_key}
-                      className="hover:bg-muted/30"
-                    >
+                    <TableRow key={file.full_key} className="hover:bg-muted/30">
                       <TableCell className="flex items-center gap-2 font-medium">
                         <File className="size-4 text-slate-500" />
 
-                        <span
-                          className="truncate"
-                          title={file.name}
-                        >
+                        <span className="truncate" title={file.name}>
                           {file.name}
                         </span>
                       </TableCell>
 
                       <TableCell>
                         {file.size > 1024 * 1024
-                          ? `${(
-                              file.size /
-                              (1024 * 1024)
-                            ).toFixed(2)} MB`
-                          : `${(
-                              file.size / 1024
-                            ).toFixed(1)} KB`}
+                          ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${(file.size / 1024).toFixed(1)} KB`}
                       </TableCell>
 
                       <TableCell className="text-xs text-muted-foreground">
-                        {new Date(
-                          file.last_modified
-                        ).toLocaleString()}
+                        {new Date(file.last_modified).toLocaleString()}
                       </TableCell>
 
                       <TableCell className="text-right">
@@ -471,9 +436,7 @@ export default function ConnectionDashboardPage() {
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() =>
-                              handleDownload(file.full_key)
-                            }
+                            onClick={() => handleDownload(file.full_key)}
                           >
                             <Download className="size-4" />
                           </Button>
@@ -482,9 +445,7 @@ export default function ConnectionDashboardPage() {
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 text-destructive"
-                            onClick={() =>
-                              handleDelete(file.full_key)
-                            }
+                            onClick={() => handleDelete(file.full_key)}
                           >
                             <Trash2 className="size-4" />
                           </Button>
@@ -494,8 +455,7 @@ export default function ConnectionDashboardPage() {
                   ))}
 
                   {(!data ||
-                    (data.folders.length === 0 &&
-                      data.files.length === 0)) && (
+                    (data.folders.length === 0 && data.files.length === 0)) && (
                     <TableRow>
                       <TableCell
                         colSpan={4}

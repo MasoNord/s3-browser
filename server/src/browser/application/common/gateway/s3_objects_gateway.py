@@ -18,3 +18,13 @@ class S3ObjectsGateway(Protocol):
         connection_id: UUID
     ):
         raise NotImplementedError
+
+    @abstractmethod
+    async def delete_object(
+        self,
+        bucket_name: str,
+        prefix: str,
+        key: str,
+        connection_id: UUID
+    ):
+        raise NotImplementedError
