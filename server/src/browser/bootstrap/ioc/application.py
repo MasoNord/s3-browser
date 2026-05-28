@@ -6,6 +6,7 @@ from browser.application.common.gateway.s3_connection_settings_gateway import S3
 from browser.application.common.gateway.s3_objects_gateway import S3ObjectsGateway
 from browser.application.common.gateway.uow import UoW
 from browser.application.objects.read import ReadAllObjects
+from browser.application.objects.upload import UploadObjectByConnectionID
 from browser.application.s3_connections.create import CreateS3Connection
 from browser.application.s3_connections.read import ReadActiveConnections
 from browser.application.s3_connections.restore import RestoreS3Connection
@@ -31,7 +32,8 @@ class ApplicationProvider(Provider):
         ReadActiveConnections,
         RestoreS3Connection,
         ReadAllBucketsByConnectionId,
-        ReadAllObjects
+        ReadAllObjects,
+        UploadObjectByConnectionID
     )
 
     s3_connection_settings_gateway = provide(SAS3ConnectionSettingsGateway, provides=S3ConnectionSettingsGateway)

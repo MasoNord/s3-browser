@@ -13,7 +13,7 @@ class AiobotocoreS3BucketGateway(S3BucketGateway):
         self._connection_manager = connection_manager
 
     async def read_all(self, connection_id: UUID) -> List[S3Bucket]:
-        connection = self._connection_manager.get_active_connection(connection_id)
+        connection = await self._connection_manager.get_active_connection(connection_id)
 
         if not connection:
             raise InfrastructureError

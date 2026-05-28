@@ -1,6 +1,5 @@
 import logging
 from typing import AsyncIterator
-
 from aiobotocore.session import AioSession, get_session
 from dishka import Provider, provide, Scope, AnyOf
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker, AsyncSession

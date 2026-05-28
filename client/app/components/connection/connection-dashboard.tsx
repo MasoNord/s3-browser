@@ -1,6 +1,13 @@
 import * as React from "react"
 import { useParams, useSearchParams } from "react-router"
-import { Folder, File, Download, Trash2, Upload, ArrowLeft } from "lucide-react"
+import {
+  Folder,
+  File,
+  Download,
+  Trash2,
+  Upload,
+  ArrowLeft,
+} from "lucide-react"
 
 import {
   Breadcrumb,
@@ -10,10 +17,17 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "../ui/breadcrumb"
+
 import { Separator } from "../ui/separator"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "../ui/sidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "../ui/sidebar"
+
 import { AppSidebar } from "./app-sidebar"
 import { Button } from "../ui/button"
+
 import {
   Table,
   TableBody,
@@ -22,7 +36,11 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table"
+
 import { readBucketObjects } from "~/api/objects/read"
+import { s3BrowserAPIBaseV1 } from "~/api/config"
+
+import { toast } from "sonner"
 
 interface S3Folder {
   name: string
@@ -56,6 +74,7 @@ export default function ConnectionDashboardPage() {
 
   const fetchObjects = React.useCallback(async () => {
     if (!selectedBucket) return
+
     setLoading(true)
 
     try {
@@ -66,9 +85,11 @@ export default function ConnectionDashboardPage() {
       )
 
       const resData: BackendResponse = response.data
+
       setData(resData)
     } catch (err) {
       console.error("Ошибка загрузки данных S3:", err)
+      toast.error("Ошибка загрузки объектов")
     } finally {
       setLoading(false)
     }
@@ -79,74 +100,166 @@ export default function ConnectionDashboardPage() {
   }, [fetchObjects])
 
   const handleSelectBucket = (bucketName: string) => {
-    setSearchParams({ bucket: bucketName, prefix: "" })
+    setSearchParams({
+      bucket: bucketName,
+      prefix: "",
+    })
+
     setData(null)
   }
 
   const handleBreadcrumbClick = (index: number) => {
     if (!selectedBucket) return
+
     const parts = currentPrefix.split("/").filter(Boolean)
+
     if (index === -1) {
-      setSearchParams({ bucket: selectedBucket, prefix: "" })
+      setSearchParams({
+        bucket: selectedBucket,
+        prefix: "",
+      })
     } else {
       const newPrefix = parts.slice(0, index + 1).join("/") + "/"
-      setSearchParams({ bucket: selectedBucket, prefix: newPrefix })
+
+      setSearchParams({
+        bucket: selectedBucket,
+        prefix: newPrefix,
+      })
     }
   }
 
   const handleGoBack = () => {
     if (!selectedBucket) return
+
     const parts = currentPrefix.split("/").filter(Boolean)
+
     if (parts.length <= 1) {
-      setSearchParams({ bucket: selectedBucket, prefix: "" })
+      setSearchParams({
+        bucket: selectedBucket,
+        prefix: "",
+      })
     } else {
       const newPrefix = parts.slice(0, -1).join("/") + "/"
-      setSearchParams({ bucket: selectedBucket, prefix: newPrefix })
+
+      setSearchParams({
+        bucket: selectedBucket,
+        prefix: newPrefix,
+      })
     }
   }
 
-  const handleDelete = (key: string) => {
-    if (!window.confirm(`Вы уверены, что хотите удалить: ${key}?`)) return
+  const handleDelete = async (key: string) => {
+    if (!selectedBucket) return
 
-    fetch(
-      `/api/v1/connections/${connectionId}/buckets/${selectedBucket}/objects?key=${encodeURIComponent(key)}`,
-      {
-        method: "DELETE",
-      }
-    ).then((res) => {
-      if (res.ok) fetchObjects()
-      else alert("Не удалось удалить объект")
-    })
+    if (!window.confirm(`Вы уверены, что хотите удалить: ${key}?`)) {
+      return
+    }
+
+    try {
+      await s3BrowserAPIBaseV1.delete(
+        `/api/v1/connections/${connectionId}/buckets/${selectedBucket}/objects`,
+        {
+          params: {
+            key,
+          },
+        }
+      )
+
+      toast.success("Объект удалён")
+
+      fetchObjects()
+    } catch (error) {
+      console.error(error)
+
+      toast.error("Не удалось удалить объект")
+    }
   }
 
-  const handleDownload = (key: string) => {
-    window.open(
-      `/api/v1/connections/${connectionId}/buckets/${selectedBucket}/objects/download?key=${encodeURIComponent(key)}`,
-      "_blank"
-    )
+  const handleDownload = async (key: string) => {
+    if (!selectedBucket) return
+
+    try {
+      const response = await s3BrowserAPIBaseV1.get(
+        `/api/v1/connections/${connectionId}/buckets/${selectedBucket}/objects/download`,
+        {
+          params: {
+            key,
+          },
+          responseType: "blob",
+        }
+      )
+
+      const blob = new Blob([response.data])
+
+      const url = window.URL.createObjectURL(blob)
+
+      const link = document.createElement("a")
+
+      link.href = url
+      link.download = key.split("/").pop() || "file"
+
+      document.body.appendChild(link)
+
+      link.click()
+
+      link.remove()
+
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error(error)
+
+      toast.error("Ошибка скачивания файла")
+    }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0]
+
     if (!file || !selectedBucket) return
 
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("prefix", currentPrefix)
+    try {
+      const formData = new FormData()
 
-    fetch(
-      `/api/v1/connections/${connectionId}/buckets/${selectedBucket}/upload`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    ).then((res) => {
-      if (res.ok) {
+      formData.append("file", file)
+
+      const result = await s3BrowserAPIBaseV1.post(
+        `/objects/${connectionId}/upload`,
+        formData,
+        {
+          params: {
+            bucket_name: selectedBucket,
+            prefix: currentPrefix,
+          },
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      )
+
+      console.log(result.status)
+
+      if (
+        result.status === 200 ||
+        result.status === 201 ||
+        result.status === 204
+      ) {
+        toast.success("Файл успешно загружен")
+
         fetchObjects()
       } else {
-        alert("Ошибка при загрузке файла")
+        console.error("Ошибка при загрузке файла")
       }
-    })
+    } catch (error) {
+      console.error(error)
+
+      console.error("Ошибка при загрузке файла")
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
   }
 
   const prefixParts = currentPrefix.split("/").filter(Boolean)
@@ -157,11 +270,16 @@ export default function ConnectionDashboardPage() {
         selectedBucket={selectedBucket}
         onSelectBucket={handleSelectBucket}
       />
+
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b pr-4">
           <div className="flex items-center gap-2 px-3">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mr-2 h-4" />
+
+            <Separator
+              orientation="vertical"
+              className="mr-2 h-4"
+            />
 
             <Breadcrumb>
               <BreadcrumbList>
@@ -170,6 +288,7 @@ export default function ConnectionDashboardPage() {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault()
+
                       handleBreadcrumbClick(-1)
                     }}
                   >
@@ -180,6 +299,7 @@ export default function ConnectionDashboardPage() {
                 {prefixParts.map((part, index) => (
                   <React.Fragment key={index}>
                     <BreadcrumbSeparator />
+
                     <BreadcrumbItem>
                       {index === prefixParts.length - 1 ? (
                         <BreadcrumbPage>{part}</BreadcrumbPage>
@@ -188,6 +308,7 @@ export default function ConnectionDashboardPage() {
                           href="#"
                           onClick={(e) => {
                             e.preventDefault()
+
                             handleBreadcrumbClick(index)
                           }}
                         >
@@ -209,12 +330,15 @@ export default function ConnectionDashboardPage() {
                 className="hidden"
                 onChange={handleFileUpload}
               />
+
               <Button
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 className="gap-2"
               >
-                <Upload className="size-4" /> Upload File
+                <Upload className="size-4" />
+
+                Upload File
               </Button>
             </div>
           )}
@@ -235,13 +359,21 @@ export default function ConnectionDashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead className="w-[120px]">Size</TableHead>
-                    <TableHead className="w-[200px]">Last Modified</TableHead>
+
+                    <TableHead className="w-[120px]">
+                      Size
+                    </TableHead>
+
+                    <TableHead className="w-[200px]">
+                      Last Modified
+                    </TableHead>
+
                     <TableHead className="w-[100px] text-right">
                       Actions
                     </TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
                   {currentPrefix && (
                     <TableRow
@@ -250,25 +382,39 @@ export default function ConnectionDashboardPage() {
                     >
                       <TableCell className="flex items-center gap-2 font-medium text-blue-500">
                         <ArrowLeft className="size-4" />
+
                         <span>.. (Назад)</span>
                       </TableCell>
+
                       <TableCell>—</TableCell>
+
                       <TableCell>—</TableCell>
-                      <TableCell></TableCell>
+
+                      <TableCell />
                     </TableRow>
                   )}
+
                   {data?.folders.map((folder) => (
                     <TableRow
                       key={folder.full_key}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => setSearchParams({ bucket: selectedBucket, prefix: folder.full_key })}
+                      onClick={() =>
+                        setSearchParams({
+                          bucket: selectedBucket,
+                          prefix: folder.full_key,
+                        })
+                      }
                     >
                       <TableCell className="flex items-center gap-2 font-medium">
                         <Folder className="size-4 fill-amber-500/20 text-amber-500" />
+
                         <span>{folder.name}</span>
                       </TableCell>
+
                       <TableCell>—</TableCell>
+
                       <TableCell>—</TableCell>
+
                       <TableCell className="text-right">
                         <Button
                           size="icon"
@@ -276,6 +422,7 @@ export default function ConnectionDashboardPage() {
                           className="h-8 w-8 text-destructive"
                           onClick={(e) => {
                             e.stopPropagation()
+
                             handleDelete(folder.full_key)
                           }}
                         >
@@ -286,36 +433,58 @@ export default function ConnectionDashboardPage() {
                   ))}
 
                   {data?.files.map((file) => (
-                    <TableRow key={file.full_key} className="hover:bg-muted/30">
+                    <TableRow
+                      key={file.full_key}
+                      className="hover:bg-muted/30"
+                    >
                       <TableCell className="flex items-center gap-2 font-medium">
                         <File className="size-4 text-slate-500" />
-                        <span className="truncate" title={file.name}>
+
+                        <span
+                          className="truncate"
+                          title={file.name}
+                        >
                           {file.name}
                         </span>
                       </TableCell>
+
                       <TableCell>
                         {file.size > 1024 * 1024
-                          ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
-                          : `${(file.size / 1024).toFixed(1)} KB`}
+                          ? `${(
+                              file.size /
+                              (1024 * 1024)
+                            ).toFixed(2)} MB`
+                          : `${(
+                              file.size / 1024
+                            ).toFixed(1)} KB`}
                       </TableCell>
+
                       <TableCell className="text-xs text-muted-foreground">
-                        {new Date(file.last_modified).toLocaleString()}
+                        {new Date(
+                          file.last_modified
+                        ).toLocaleString()}
                       </TableCell>
+
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleDownload(file.full_key)}
+                            onClick={() =>
+                              handleDownload(file.full_key)
+                            }
                           >
                             <Download className="size-4" />
                           </Button>
+
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 text-destructive"
-                            onClick={() => handleDelete(file.full_key)}
+                            onClick={() =>
+                              handleDelete(file.full_key)
+                            }
                           >
                             <Trash2 className="size-4" />
                           </Button>
@@ -325,7 +494,8 @@ export default function ConnectionDashboardPage() {
                   ))}
 
                   {(!data ||
-                    (data.folders.length === 0 && data.files.length === 0)) && (
+                    (data.folders.length === 0 &&
+                      data.files.length === 0)) && (
                     <TableRow>
                       <TableCell
                         colSpan={4}

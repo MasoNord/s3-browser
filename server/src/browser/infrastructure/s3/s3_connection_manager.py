@@ -38,7 +38,9 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
     async def __aexit__(self, exc_type, exc, tb) -> None:
         await self._close()
 
-    def get_active_connection(self, connection_id) -> AioBaseClient | None:
+    async def get_active_connection(self, connection_id) -> AioBaseClient | None:
+        await self.ping(connection_id)
+
         return self._active_connections.get(connection_id, None)
 
     async def get_active_connections(self) -> List[ConnectionConfig]:
