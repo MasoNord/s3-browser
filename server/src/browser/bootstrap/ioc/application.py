@@ -7,6 +7,7 @@ from browser.application.common.gateway.s3_objects_gateway import S3ObjectsGatew
 from browser.application.common.gateway.uow import UoW
 from browser.application.objects.delete import DeleteObjectByConnectionId
 from browser.application.objects.read import ReadAllObjects
+from browser.application.objects.read_url import ReadObjectDownloadUrl
 from browser.application.objects.upload import UploadObjectByConnectionID
 from browser.application.s3_connections.create import CreateS3Connection
 from browser.application.s3_connections.read import ReadActiveConnections
@@ -35,7 +36,8 @@ class ApplicationProvider(Provider):
         ReadAllBucketsByConnectionId,
         ReadAllObjects,
         UploadObjectByConnectionID,
-        DeleteObjectByConnectionId
+        DeleteObjectByConnectionId,
+        ReadObjectDownloadUrl
     )
 
     s3_connection_settings_gateway = provide(SAS3ConnectionSettingsGateway, provides=S3ConnectionSettingsGateway)

@@ -149,7 +149,7 @@ export default function ConnectionDashboardPage() {
         params: {
           bucket_name: selectedBucket,
           key: key,
-          prefix: currentPrefix,
+          prefix: "",
         },
       })
 
@@ -167,39 +167,28 @@ export default function ConnectionDashboardPage() {
     if (!selectedBucket) return
 
     try {
-      const response = await s3BrowserAPIBaseV1.get(
-        `/api/v1/connections/${connectionId}/buckets/${selectedBucket}/objects/download`,
+      const response = await s3BrowserAPIBaseV1.post(
+        `/objects/${connectionId}/download-url`,
+        null,
         {
           params: {
+            bucket_name: selectedBucket,
             key,
+            prefix: "",
           },
-          responseType: "blob",
         }
       )
 
-      const blob = new Blob([response.data])
+      const downloadUrl = response.data?.url || response.data
 
-      const url = window.URL.createObjectURL(blob)
+      if (!downloadUrl) throw new Error("Empty URL")
 
-      const link = document.createElement("a")
-
-      link.href = url
-      link.download = key.split("/").pop() || "file"
-
-      document.body.appendChild(link)
-
-      link.click()
-
-      link.remove()
-
-      window.URL.revokeObjectURL(url)
+      window.location.href = downloadUrl
     } catch (error) {
       console.error(error)
-
-      toast.error("Ошибка скачивания файла")
+      toast.error("Ошибка получения ссылки")
     }
   }
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
 
@@ -223,8 +212,6 @@ export default function ConnectionDashboardPage() {
           },
         }
       )
-
-      console.log(result.status)
 
       if (
         result.status === 200 ||

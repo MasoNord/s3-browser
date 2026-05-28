@@ -10,8 +10,9 @@ from browser.infrastructure.s3.s3_connection_manager import AiobotocoreS3Connect
 
 logger = logging.getLogger(__name__)
 
-class AiobotocoreS3ObjectsGateway(S3ObjectsGateway):
+EXPIRE_DOWNLOAD_URL = 3600
 
+class AiobotocoreS3ObjectsGateway(S3ObjectsGateway):
     def __init__(self, connection_manager: AiobotocoreS3ConnectionManager):
         self._connection_manager = connection_manager
 
@@ -28,6 +29,29 @@ class AiobotocoreS3ObjectsGateway(S3ObjectsGateway):
             Delimiter=delimiter,
             Prefix=prefix if prefix else "",
         )
+
+    async def get_download_url(self, bucket_name: str, prefix: str, key: str, connection_id: UUID) -> str | None:
+        try:
+
+            connection = await self._connection_manager.get_active_connection(connection_id)
+            prefix = prefix or ""
+
+            if prefix and not prefix.endswith("/"):
+                prefix += "/"
+
+            object_key = f"{prefix}{key}"
+
+            return await connection.generate_presigned_url(
+                "get_object",
+                Params={
+                    "Bucket": bucket_name,
+                    "Key": object_key,
+                },
+                ExpiresIn=EXPIRE_DOWNLOAD_URL,
+            )
+        except ClientError as e:
+            raise InfrastructureError(str(e))
+
 
     async def upload_object(self, data: UploadObject, connection_id: UUID):
         logger.info("File uploading started: PREFIX: %s", data.prefix)

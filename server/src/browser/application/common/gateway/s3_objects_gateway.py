@@ -12,6 +12,16 @@ class S3ObjectsGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_download_url(
+        self,
+        bucket_name: str,
+        prefix: str,
+        key: str,
+        connection_id: UUID
+    ) -> str | None:
+        raise NotImplementedError
+
+    @abstractmethod
     async def upload_object(
         self,
         data: UploadObject,
