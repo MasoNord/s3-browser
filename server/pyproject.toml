@@ -14,6 +14,7 @@ dependencies = [
     "pydantic>=2.13.4",
     "sqlalchemy>=2.0.49",
     "starlette>=1.0.0",
+    "typer>=0.26.2",
     "uuid6>=2025.0.1",
     "uvicorn>=0.48.0",
 ]
