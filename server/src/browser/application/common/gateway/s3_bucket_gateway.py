@@ -10,3 +10,7 @@ class S3BucketGateway(Protocol):
     @abstractmethod
     async def read_all(self, connection_id: UUID) -> List[S3Bucket]:
         raise NotImplementedError
+
+    @abstractmethod
+    async def create(self, connection_id: UUID, name: str) -> None:
+        raise NotImplementedError

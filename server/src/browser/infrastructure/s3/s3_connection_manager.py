@@ -6,12 +6,15 @@ from typing import Self, Final, List
 from datetime import datetime, timezone
 from aiobotocore.client import AioBaseClient
 from aiobotocore.session import AioSession
-from botocore.exceptions import UnknownServiceError
+from botocore.exceptions import UnknownServiceError, NoCredentialsError, PartialCredentialsError, \
+    EndpointConnectionError, ClientError
 
 from browser.application.common.gateway.s3_connection_manager import S3ConnectionManager
 from browser.domain.entity.s3_connection_config import ConnectionConfig
 from browser.domain.entity.s3_connection_settings import S3ConnectionSetting
 from browser.infrastructure.exceptions.base import InfrastructureError
+from browser.infrastructure.exceptions.s3 import S3UnknownServiceError, S3InvalidConnectionConfigError, \
+    S3ClientCreationError, S3ConnectionNotFoundError, S3ConnectionCloseError, S3IdleConnectionCleanupError
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +86,6 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
 
         return None
 
-
     async def create_connection(self, config: ConnectionConfig) -> None:
 
         try:
@@ -97,11 +99,35 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
 
             self._active_connections[config.id] = session
             self._active_connections_config[config.id] = config
-            logger.info("Creating connection")
-        except UnknownServiceError as err:
-            raise InfrastructureError(str(err))
 
-        return None
+            logger.info("Creating connection")
+
+        except UnknownServiceError as err:
+            logger.error(err)
+            raise S3UnknownServiceError(str(err))
+
+        except (
+                NoCredentialsError,
+                PartialCredentialsError
+        ) as err:
+            logger.error(err)
+            raise S3InvalidConnectionConfigError(str(err))
+
+        except EndpointConnectionError as err:
+            logger.error(err)
+            raise S3ClientCreationError(str(err))
+
+        except ClientError as err:
+            logger.error(err)
+            raise S3ClientCreationError(str(err))
+
+        except asyncio.TimeoutError as err:
+            logger.error(err)
+            raise S3ClientCreationError(str(err))
+
+        except Exception as err:
+            logger.error(err)
+            raise S3ClientCreationError(str(err))
 
     async def disconnection_connection(self, connection_id: UUID) -> None:
 
@@ -109,13 +135,14 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
         self._active_connections_config.pop(connection_id, None)
 
         if not active_connection:
-            logger.warning("No active connection found by requested ID: %s", connection_id)
-            return None
-            # raise InfrastructureError()
-
-        await active_connection.close()
-
-        return None
+            raise S3ConnectionNotFoundError(
+                f"Connection not found: {connection_id}"
+            )
+        try:
+            await active_connection.close()
+        except Exception as err:
+            logger.exception(err)
+            raise S3ConnectionCloseError(str(err))
 
     async def _remove_idle_connections_task(self) -> None:
         """
@@ -129,7 +156,7 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
                 logger.info("Removing idle connections")
                 await asyncio.sleep(15)
 
-                for connection_id, connection in self._active_connections_config.items():
+                for connection_id, connection in list(self._active_connections_config.items()):
                     logger.info("Checking connection: Connection ID: %s", connection_id)
                     active_connection = self._active_connections.get(connection_id, None)
                     if active_connection:
@@ -148,6 +175,9 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
 
         except asyncio.CancelledError:
             raise InfrastructureError()
+        except Exception as err:
+            logger.exception(err)
+            raise S3IdleConnectionCleanupError(str(err))
 
     def _create_background_task(self) -> None:
         task = asyncio.create_task(self._remove_idle_connections_task())
@@ -165,10 +195,19 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
             return_exceptions=True,
         )
 
-        logger.info("Cleaning up background tasks set")
         self._background_tasks.clear()
 
         logger.info("Closing active connections")
+
         for connection_id, connection in self._active_connections.items():
-            await connection.close()
-            logger.info("Connection has been closed: Connection ID: %s", connection_id)
+            try:
+                await connection.close()
+
+            except Exception as err:
+                logger.exception(err)
+                raise S3ConnectionCloseError(str(err))
+
+            logger.info(
+                "Connection has been closed: Connection ID: %s",
+                connection_id
+            )

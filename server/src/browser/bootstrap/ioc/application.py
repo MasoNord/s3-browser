@@ -1,5 +1,6 @@
 from dishka import Provider, Scope, provide_all, provide
 
+from browser.application.buckets.create import CreateBucket
 from browser.application.buckets.read import ReadAllBucketsByConnectionId
 from browser.application.common.gateway.s3_bucket_gateway import S3BucketGateway
 from browser.application.common.gateway.s3_connection_settings_gateway import S3ConnectionSettingsGateway
@@ -37,7 +38,8 @@ class ApplicationProvider(Provider):
         ReadAllObjects,
         UploadObjectByConnectionID,
         DeleteObjectByConnectionId,
-        ReadObjectDownloadUrl
+        ReadObjectDownloadUrl,
+        CreateBucket
     )
 
     s3_connection_settings_gateway = provide(SAS3ConnectionSettingsGateway, provides=S3ConnectionSettingsGateway)

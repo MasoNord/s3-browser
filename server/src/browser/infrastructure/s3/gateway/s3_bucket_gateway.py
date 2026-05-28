@@ -12,6 +12,18 @@ class AiobotocoreS3BucketGateway(S3BucketGateway):
     def __init__(self, connection_manager: AiobotocoreS3ConnectionManager) -> None:
         self._connection_manager = connection_manager
 
+    async def create(self,  connection_id: UUID, name: str) -> None:
+        connection = await self._connection_manager.get_active_connection(connection_id)
+
+        if not connection:
+            raise InfrastructureError
+
+        await connection.create_bucket(
+            Bucket=name
+        )
+
+        return None
+
     async def read_all(self, connection_id: UUID) -> List[S3Bucket]:
         connection = await self._connection_manager.get_active_connection(connection_id)
 
