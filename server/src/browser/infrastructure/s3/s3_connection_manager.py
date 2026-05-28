@@ -14,14 +14,14 @@ from browser.domain.entity.s3_connection_config import ConnectionConfig
 from browser.domain.entity.s3_connection_settings import S3ConnectionSetting
 from browser.infrastructure.exceptions.base import InfrastructureError
 from browser.infrastructure.exceptions.s3 import S3UnknownServiceError, S3InvalidConnectionConfigError, \
-    S3ClientCreationError, S3ConnectionNotFoundError, S3ConnectionCloseError, S3IdleConnectionCleanupError
+    S3ClientCreationError, S3ConnectionNotFoundError, S3ConnectionCloseError, S3IdleConnectionCleanupError, \
+    ActionConnectionNotFoundById
 
 logger = logging.getLogger(__name__)
 
 CONNECTION_IDLE_THRESHOLD: Final[int] = 15 # In minutes
 SLEEP_TIME_FOR_IDLE_CONNECTION_REMOVAL: Final[int] = 15 # In seconds
 
-# TODO: replace all infrastructure errors by corresponding case errors
 class AiobotocoreS3ConnectionManager(S3ConnectionManager):
 
     def __init__(self, aiobotocore_session: AioSession) -> None:
@@ -42,9 +42,15 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
         await self._close()
 
     async def get_active_connection(self, connection_id) -> AioBaseClient | None:
+
+        connection = self._active_connections.get(connection_id, None)
+
+        if not connection:
+            raise ActionConnectionNotFoundById
+
         await self.ping(connection_id)
 
-        return self._active_connections.get(connection_id, None)
+        return connection
 
     async def get_active_connections(self) -> List[ConnectionConfig]:
         return [
@@ -97,6 +103,8 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
                 aws_secret_access_key=config.aws_secret_access_key,
             ).__aenter__()
 
+            await session.list_buckets()
+
             self._active_connections[config.id] = session
             self._active_connections_config[config.id] = config
 
@@ -119,6 +127,16 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
 
         except ClientError as err:
             logger.error(err)
+            error_code = err.response.get("Error", {}).get(
+                "Code")
+            if error_code in (
+                    "InvalidAccessKeyId",
+                    "SignatureDoesNotMatch",
+                    "AccessDenied",
+                    "InvalidSecurity",
+            ):
+                raise S3InvalidConnectionConfigError( "Invalid S3 credentials" )
+
             raise S3ClientCreationError(str(err))
 
         except asyncio.TimeoutError as err:
@@ -135,9 +153,7 @@ class AiobotocoreS3ConnectionManager(S3ConnectionManager):
         self._active_connections_config.pop(connection_id, None)
 
         if not active_connection:
-            raise S3ConnectionNotFoundError(
-                f"Connection not found: {connection_id}"
-            )
+            return
         try:
             await active_connection.close()
         except Exception as err:

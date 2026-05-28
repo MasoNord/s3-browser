@@ -39,3 +39,9 @@ class S3PingError(S3ConnectionError):
 
 class S3InvalidConnectionConfigError(S3ConnectionError):
     """Invalid S3 connection config"""
+
+class S3BucketCreationAccessDeniedError(S3ConnectionError):
+    """Missing S3 bucket creation access denied"""
+
+class ActionConnectionNotFoundById(InfrastructureError):
+    """Failed to get active S3 connection"""

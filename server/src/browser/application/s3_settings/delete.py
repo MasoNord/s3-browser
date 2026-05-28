@@ -5,6 +5,7 @@ from browser.application.common.gateway.s3_connection_manager import S3Connectio
 from browser.application.common.gateway.s3_connection_settings_gateway import S3ConnectionSettingsGateway
 from browser.application.common.gateway.uow import UoW
 from browser.application.exceptions.base import ApplicationError
+from browser.domain.exception.s3_setting import S3ConnectionSettingNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class DeleteS3ConnectionSettingById:
         connection_setting = await self._s3_connection_settings_gateway.get_by_id(str(setting_id))
 
         if not connection_setting:
-            raise ApplicationError
+            raise S3ConnectionSettingNotFoundError
 
         async with self._uow:
             await self._s3_connection_manager.disconnection_connection(setting_id)

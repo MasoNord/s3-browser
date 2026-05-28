@@ -13,8 +13,10 @@ from browser.application.objects.upload import UploadObjectByConnectionID
 from browser.application.s3_connections.create import CreateS3Connection
 from browser.application.s3_connections.read import ReadActiveConnections
 from browser.application.s3_connections.restore import RestoreS3Connection
+from browser.application.s3_settings.create import CreateS3Setting
 from browser.application.s3_settings.delete import DeleteS3ConnectionSettingById
 from browser.application.s3_settings.read import ReadS3SettingsAll, ReadS3ConnectionSettingByID
+from browser.application.s3_settings.update import UpdateS3Setting
 from browser.infrastructure.persistence.gateway.s3_connection_settings_gateway import SAS3ConnectionSettingsGateway
 from browser.infrastructure.persistence.uow import SAUoW
 from browser.infrastructure.s3.gateway.s3_bucket_gateway import AiobotocoreS3BucketGateway
@@ -39,7 +41,9 @@ class ApplicationProvider(Provider):
         UploadObjectByConnectionID,
         DeleteObjectByConnectionId,
         ReadObjectDownloadUrl,
-        CreateBucket
+        CreateBucket,
+        CreateS3Setting,
+        UpdateS3Setting
     )
 
     s3_connection_settings_gateway = provide(SAS3ConnectionSettingsGateway, provides=S3ConnectionSettingsGateway)

@@ -32,7 +32,6 @@ class ReadS3ConnectionSettingByID:
 
         result = await self.s3_connection_settings_gateway.get_by_id(str(settings_id))
 
-        # TODO: replace generic exception by specific one
         if not result:
             logger.warning("S3 connection setting not found for ID: %s", settings_id)
             raise ApplicationError

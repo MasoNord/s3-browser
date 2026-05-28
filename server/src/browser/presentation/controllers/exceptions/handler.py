@@ -9,6 +9,7 @@ from starlette.responses import Response, JSONResponse
 import json
 
 from browser.application.exceptions.base import ApplicationError
+from browser.domain.exception.base import DomainError
 from browser.infrastructure.exceptions.base import InfrastructureError
 from browser.presentation.controllers.exceptions.constants import ERROR_MESSAGE, ERROR_CODE, ERROR_HTTP_CODE
 
@@ -36,6 +37,21 @@ async def infrastructure_error_handler(request: Request, e: InfrastructureError)
 
 
     logger.error("Infrastructure Error: %s", str(e))
+
+    return Response(
+        content=json.dumps(content),
+        status_code=ERROR_HTTP_CODE[type(e)],
+        media_type="application/json"
+    )
+
+async def domain_error_handler(request: Request, e: DomainError) -> Response:
+    content = {
+        "description": ERROR_MESSAGE[type(e)],
+        "unique_code": ERROR_CODE[type(e)],
+    }
+
+
+    logger.error("Domain Error: %s", str(e))
 
     return Response(
         content=json.dumps(content),
